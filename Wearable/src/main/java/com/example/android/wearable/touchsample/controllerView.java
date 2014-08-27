@@ -9,8 +9,11 @@ import android.widget.ImageView;
 public class controllerView extends ImageView {
 
     MainActivity mActivity;
+    int mXPrev = 0;
+    int mYPrev = 0;
     int mWidth = 0;
     int mHeight = 0;
+    int mResolution = 20;
 
     public controllerView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -26,9 +29,13 @@ public class controllerView extends ImageView {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        int x = (int) event.getX();
-        int y = (int) event.getY();
-        mActivity.sendTouchPosition(x, y);
+        int x = mResolution * ((int) event.getX() / mResolution);
+        int y = mResolution * ((int) event.getY() / mResolution);
+        if (x != mXPrev || y != mYPrev) {
+            mActivity.sendTouchPosition(x, y);
+        }
+        mXPrev = x;
+        mYPrev = y;
         return true;
     }
 

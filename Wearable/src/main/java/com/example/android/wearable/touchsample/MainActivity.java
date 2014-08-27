@@ -47,8 +47,13 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     private static final String TAG = "MainActivity";
 
     private static final String TOUCH_POSITION_PATH = "/touch-position";
+    private static final String NOTIFY_RECEIPT_PATH = "/notify-receipt";
 
     private GoogleApiClient mGoogleApiClient;
+
+    private boolean mHasBuffer = false;
+    private String mBufferedString;
+    private boolean mSendable = true;
 
     @Override
     public void onCreate(Bundle b) {
@@ -96,8 +101,15 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     }
 
     @Override
-    public void onMessageReceived(MessageEvent event) {
-        LOGD(TAG, "onMessageReceived: " + event);
+    public void onMessageReceived(MessageEvent messageEvent) {
+        if (messageEvent.getPath().equals(NOTIFY_RECEIPT_PATH)) {
+            if (mHasBuffer) {
+                new SendTouchPositionTask().execute(mBufferedString);
+                mHasBuffer = false;
+            } else {
+                mSendable = true;
+            }
+        }
     }
 
     @Override
@@ -127,7 +139,13 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
         buf.append(",");
         buf.append(Integer.toString(y));
 
-        new SendTouchPositionTask().execute(buf.toString());
+        if (mSendable) {
+            mSendable = false;
+            new SendTouchPositionTask().execute(buf.toString());
+        } else {
+            mHasBuffer = true;
+            mBufferedString = buf.toString();
+        }
     }
 
 

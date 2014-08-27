@@ -58,6 +58,8 @@ public class MainActivity extends Activity implements
     private static final int REQUEST_RESOLVE_ERROR = 1000;
 
     private static final String START_ACTIVITY_PATH = "/start-activity";
+    private static final String TOUCH_POSITION_PATH = "/touch-position";
+    private static final String NOTIFY_RECEIPT_PATH = "/notify-receipt";
 
     private GoogleApiClient mGoogleApiClient;
     private boolean mResolvingError = false;
@@ -154,16 +156,19 @@ public class MainActivity extends Activity implements
 
     @Override //MessageListener
     public void onMessageReceived(final MessageEvent messageEvent) {
-        try {
-            final String s = new String(messageEvent.getData(), "UTF-8");
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mMessageListAdapter.add(s);
-                }
-            });
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+        if (messageEvent.getPath().equals(TOUCH_POSITION_PATH)) {
+            try {
+                final String s = new String(messageEvent.getData(), "UTF-8");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mMessageListAdapter.add(s);
+                    }
+                });
+                new NotifyReceiptTask().execute();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -211,6 +216,17 @@ public class MainActivity extends Activity implements
             Collection<String> nodes = getNodes();
             for (String node : nodes) {
                 sendStartActivityMessage(node);
+            }
+            return null;
+        }
+    }
+
+    private class NotifyReceiptTask extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... v) {
+            Collection<String> nodes = getNodes();
+            for (String node : nodes) {
+                Wearable.MessageApi.sendMessage(mGoogleApiClient, node, NOTIFY_RECEIPT_PATH, new byte[0]);
             }
             return null;
         }
