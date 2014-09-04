@@ -54,6 +54,7 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     private boolean mHasBuffer = false;
     private String mBufferedString;
     private boolean mSendable = true;
+    private long mSentTime = 0;
 
     @Override
     public void onCreate(Bundle b) {
@@ -104,6 +105,8 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     public void onMessageReceived(MessageEvent messageEvent) {
         if (messageEvent.getPath().equals(NOTIFY_RECEIPT_PATH)) {
             if (mHasBuffer) {
+                mSendable = false;
+                mSentTime = System.currentTimeMillis();
                 new SendTouchPositionTask().execute(mBufferedString);
                 mHasBuffer = false;
             } else {
@@ -141,13 +144,26 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
 
         if (mSendable) {
             mSendable = false;
+            mSentTime = System.currentTimeMillis();
             new SendTouchPositionTask().execute(buf.toString());
         } else {
-            mHasBuffer = true;
-            mBufferedString = buf.toString();
+            if (System.currentTimeMillis() - mSentTime > 2000) { // timeout (2sec)
+                reconnectGoogleApi();
+                mSendable = true;
+                mHasBuffer = false;
+            } else {
+                mHasBuffer = true;
+                mBufferedString = buf.toString();
+            }
         }
     }
 
+    private void reconnectGoogleApi() {
+        Wearable.MessageApi.removeListener(mGoogleApiClient, this);
+        Wearable.NodeApi.removeListener(mGoogleApiClient, this);
+        mGoogleApiClient.disconnect();
+        mGoogleApiClient.connect();
+    }
 
     private class SendTouchPositionTask extends AsyncTask<String, Void, Void> {
         @Override
